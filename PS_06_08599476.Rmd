@@ -1,0 +1,752 @@
+---
+title: "Problem Set 6"
+author: "08599476"
+subtitle: ANTHRBIO 463
+output:
+  html_document:
+    highlight: tango
+    theme: cerulean
+  pdf_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+#code chunk to put in default settings, like whether other code chunks run/show messages
+knitr::opts_chunk$set(echo = TRUE, 
+                      messages = FALSE)
+
+# Set so that long lines in R will be wrapped:
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+#note may need to install and load package "formatR" for this to run. 
+
+options (width = 80)
+
+```
+
+### Exercise 1: Water, shade, and tulips
+
+#### Exercise 1
+
+Real biological systems are full of interactions, at least if you push the variables controlling the system far enough. For example, if you take away all CO2 available to a plant, then it doesn’t matter how much sunlight it receives; these variables interact, because the effect of sunlight depends upon the amount of CO2 available. Likewise, the effect of CO2 depends upon the amount of sunlight. 
+
+This exercise entails analyzing this kind of relationship, with the goal of getting a grasp on interactions between two continuous variables. The data contained in ‘PS_06_tulips.csv’ are the number of blooms produced by 27 different tulip plants, planted at three levels of water (higher numbers mean more water) and three levels of shade (higher numbers mean more shade). The ‘BED’ variable indicates the location in the greenhouse— you may find it useful as a control variable.
+
+```{r}
+
+tulips <- read.csv("PS_06_tulips.csv")
+
+```
+
+##### A
+
+ i. Build a series of models to analyze the main and interaction effects of water and shade on the number of blooms. Be sure to control for potential confounding factors in your analysis. (0.75 points)
+
+```{r 1a}
+
+tulipsm1 <- lm(BLOOMS ~ WATER, data = tulips)
+summary(tulipsm1)
+
+```
+
+```{r 1aa}
+
+tulipsm2 <- lm(BLOOMS ~ SHADE, data = tulips)
+summary(tulipsm2)
+
+```
+
+```{r 1aaa}
+
+tulipsm3 <- lm(BLOOMS ~ WATER + SHADE, data = tulips)
+summary(tulipsm3)
+
+```
+
+```{r 1aaaa}
+
+tulipsm4 <- lm(BLOOMS ~ WATER + SHADE + WATER * SHADE, data = tulips)
+summary(tulipsm4)
+
+```
+
+ ii. Imagine you were publishing a paper reporting the results of your analyses. Which results would you choose to present (i.e., which model’s results would you discuss)? Why (i.e., on what basis did you select your ‘best’ model)? Note: we are not asking for formal model comparison and selection in this question. Instead use whatever knowledge and intuition you have gained in the class so far to explain your choice. In this question, use the raw values for your predictors (i.e., do not do any standardizing or centering prior to analysis). (0.75 points)
+ 
+*Based on the models created, I would choose to present m4, the model including interaction effects between shade and water on blooms. I made this choice because this model has the highest R-squared (adjusted R-squared: 0.7204), saying that ~72% of the variation in tulip blooms is explained by the relationship between water, shade, and blooms. Additionally, because the predicted relationships (slopes) between water and blooms and shade and blooms change substantially when they are combined to show interaction effects, showing that these predictors have confounding effects on each other and how they effect blooms.* 
+ 
+ iii. Briefly describe your findings; do they make intuitive sense to you? (1 point)
+ 
+ *They do feel like they make sense to me. I think I would assume that there is also a higher-level interaction between the two predictors in this context because of knowing that plants really cannot produce new biomass without sunlight, even if they have water--and then sometimes water can be negative in excess for plants when there's no sunlight for photosynthesis--but of course water still has its own effect on plant growth and reproduction that cannot be left out to just plot the effect of shade on blooms.*
+
+##### B
+
+As we discussed in Lecture 11, it is often difficult to interpret the main effects in models with interactions. In part A, what do the regression coefficients represent? Do they make sense in the context of the data we are exploring here? Why or why not?
+
+*In the interaction model, the water coefficient (181.50) is meant to represent the effect on blooms of increasing water by one unit when shade is zero, but shade is never zero in this model. The shade coefficient (64.10) is meant to represent the effect on blooms of increasing shade by one unit when water is zero, but water is never zero in this model. So, these coefficients don't actually represent the effect of the predictors on our outcome variable in a direct way because they aren't properly factoring in each other. This is an example of how we talked about main effects not being meaningful because of their conditionality on the variables having the value of zero in class.*
+
+*The water and shade interaction coefficient (-52.85) tells us how much the effect of water on blooms changes for every one unit increase in shade (or the opposite). So, it factors in that the effect water has on blooms is dependent on the level of shade present.*
+
+##### C
+
+Center and standardize your predictors and refit your best model from part A (however you identified it) using these standardized predictors. What is the interpretation of the regression coefficients in this model (i.e., contrast the meaning of these coefficients with the meaning of regression coefficients in part B, where the predictors were not standardized)? Does this new model produce substantively different results than the model in part A? Briefly explain.
+
+```{r 1c}
+
+tulips$WATER_scaled <- scale(tulips$WATER)
+tulips$SHADE_scaled <- scale(tulips$SHADE)
+
+tulipsm4scaled <- lm(tulips$BLOOMS ~ tulips$WATER_scaled * tulips$SHADE_scaled)
+summary(tulipsm4scaled)
+
+```
+
+*Compared to the unstandardized model, where the main effect is the effect of a one unit increase of a predictor when the other predictor is zero, in a standardized model the main effect shows the effect of a one standard deviation increase in a predictor when the other predictor is at its mean. Compared to the unstandardized model, where the interaction effect is the change in the effect of one predictor on the outcome per a one unit increase in the other variable, in a standardized model the interaction effect is the change in the effect of one predictor on the outcome per a one standard deviation increase in the other variable.*
+
+*We learned in class that standardizing models doesn't change substantive results, but it does improve interpretations even if it doesn't change the relationships in a model.*
+
+##### D
+
+Most of us have a hard time intuiting the effects of variables in interaction models simply by looking at tables of regression coefficients, but it is hard to misinterpret plotted data, assuming you have plotted things correctly. Thus, in such cases, and in many other instances in modeling, visualizing the data is a valuable step.
+
+Fit the model lm(BLOOMS ~ WATER + SHADE + WATER * SHADE), using raw predictors (i.e., ones that have not been centered and standardized).
+
+Plot the predictions of this model. There are a number of ways to plot interactions, but we’ll use perhaps the simplest, “triptych” method. (trip·tych |’triptik| noun: A set of three associated artistic, literary, or musical works intended to be appreciated together.) 
+
+ 1. Make three scatter plots with blooms on the vertical (y) axis and water on the horizontal (x) axis. We’ll call these plots #1, #2, and #3, from left to right. There are several ways to create multiple panel plots. Here, we will use a simple method available in the base R graphics package called par(), which can be used to set a range of graphical parameters. The following codes tells R to “divide the plot window into one row with three columns”. After entering this code, each plot() command you issue will fill one of these three panels, moving left to right.
+
+```{r 1d} 
+par(mfrow = c(1, 3))
+```
+
+ 2. In #1, plot those data points where the shade level is 1. Make sure the vertical axis displays the entire observed range of bloom counts, using ylim = range(d$BLOOMS) in your call to plot(). Remember that you can extract part of a list of numbers using indexing (e.g., d$x[d$z==1] gives those elements of d$x where d$z is equal to 1). Also remember that help queries (e.g., ?plot) can be very helpful if you run into any problems.
+ 
+```{r 1dd, fig.width=10, fig.height=4} 
+
+par(mfrow = c(1, 3))
+
+plot(BLOOMS[SHADE == 1] ~ WATER[SHADE ==1], 
+     ylim = range(tulips$BLOOMS),
+     xlab = "Water level",
+     ylab = "Blooms",
+     main = "SHADE == 1",
+     data = tulips)
+
+```
+
+ 3. Superimpose on the scatter plot the predicted relationship between blooms and water, given that the shade value is 1. (Note: abline() will not work for all of these models. Instead, try curve()). This can tricky the first time you try it, so take some time to think through what you are trying to do. The file ‘Plotting data and functions.pdf’, found in the problem set folder for this week, provides a basic intro to the curve() function. It’s more or less the same information you would find if you searched ?curve(), but presented in a form that you might find more digestible.
+
+```{r 1ddd, fig.width=10, fig.height=4}
+
+par(mfrow = c(1, 3))
+
+plot(BLOOMS[SHADE == 1] ~ WATER[SHADE ==1], 
+     ylim = range(tulips$BLOOMS),
+     xlab = "Water level",
+     ylab = "Blooms",
+     main = "SHADE == 1",
+     data = tulips)
+
+curve(predict(tulipsm4, newdata = data.frame(WATER = x, SHADE = 1)), 
+      add = TRUE, col = "red", lwd = 2)
+
+```
+
+ 4. Repeat steps 2 and 3 for plots #2 and #3, where shade level should be set to 2 and 3, respectively. You should have three plots like those below, but with the appropriate data points and regression lines drawn within each.
+ 
+```{r 1dddd, fig.width=10, fig.height=4}
+
+par(mfrow = c(1, 3))
+
+plot(BLOOMS[SHADE == 1] ~ WATER[SHADE == 1], 
+     ylim = range(tulips$BLOOMS),
+     xlab = "Water level",
+     ylab = "Blooms",
+     main = "SHADE == 1",
+     data = tulips)
+
+curve(predict(tulipsm4, newdata = data.frame(WATER = x, SHADE = 1)), 
+      add = TRUE, col = "red", lwd = 2)
+
+plot(BLOOMS[SHADE == 2] ~ WATER[SHADE == 2], 
+     ylim = range(tulips$BLOOMS),
+     xlab = "Water level",
+     ylab = "Blooms",
+     main = "SHADE == 2",
+     data = tulips)
+
+curve(predict(tulipsm4, newdata = data.frame(WATER = x, SHADE = 2)), 
+      add = TRUE, col = "red", lwd = 2)
+
+plot(BLOOMS[SHADE == 3] ~ WATER[SHADE == 3], 
+     ylim = range(tulips$BLOOMS),
+     xlab = "Water level",
+     ylab = "Blooms",
+     main = "SHADE == 3",
+     data = tulips)
+
+curve(predict(tulipsm4, newdata = data.frame(WATER = x, SHADE = 3)), 
+      add = TRUE, col = "red", lwd = 2)
+
+```
+
+##### E
+
+Repeat D, using the following model that lacks an interaction effect: lm(BLOOMS ~ WATER + SHADE).
+
+```{r 1ddddd, fig.width=10, fig.height=4}
+
+par(mfrow = c(1, 3))
+
+plot(BLOOMS[SHADE == 1] ~ WATER[SHADE ==1], 
+     ylim = range(tulips$BLOOMS),
+     xlab = "Water level",
+     ylab = "Blooms",
+     main = "SHADE == 1",
+     data = tulips)
+
+curve(predict(tulipsm3, newdata = data.frame(WATER = x, SHADE = 1)), 
+      add = TRUE, col = "red", lwd = 2)
+
+plot(BLOOMS[SHADE == 2] ~ WATER[SHADE == 2], 
+     ylim = range(tulips$BLOOMS),
+     xlab = "Water level",
+     ylab = "Blooms",
+     main = "SHADE == 2",
+     data = tulips)
+
+curve(predict(tulipsm3, newdata = data.frame(WATER = x, SHADE = 2)), 
+      add = TRUE, col = "red", lwd = 2)
+
+plot(BLOOMS[SHADE == 3] ~ WATER[SHADE == 3], 
+     ylim = range(tulips$BLOOMS),
+     xlab = "Water level",
+     ylab = "Blooms",
+     main = "SHADE == 3",
+     data = tulips)
+
+curve(predict(tulipsm3, newdata = data.frame(WATER = x, SHADE = 3)), 
+      add = TRUE, col = "red", lwd = 2)
+
+```
+
+##### F
+
+Compare the two triptych plots from D and E. What is the model without the interaction failing to do correctly? That is, why does the interaction model fit the data so much better?
+
+*The model without the interaction is failing to acknowledge that there is an effect of shade level on the effect of water on blooms. Basically, it is acting as if the relationship between water and blooms stays the same regardless of shade level, which is not true. The only thing that changes within the plots without the interaction is the intercept, when the slope also needs to change to represent the data well.*
+
+##### G
+
+What do you think is happening here, biologically? How would you explain the interaction in biological terms (as opposed to statistical terms)?
+
+*What we are seeing in this relationship is the fact that the effect of water on blooms depends on the level of shade. This makes sense intuitively, like, for example, adding more water increases amount of blooms a lot when shade is low, but has less of an effect (or a negative effect) when shade is high--because of lack of sunlight to photosynthesis and produce more biomass/blooms.*
+
+### Exercise 2: Fitting, predicting, and simulating
+
+#### Exercise 2
+
+In this exercise we will be using the Palmer Penguins data set we have used several times this semester. This time, we will use the data to practice fitting models, plotting their predictions, and using them to simulate new data. As we did in class, we will use the subset of the data including only Chinstrap penguins. This code loads the {palmerpenguins} package and subsets the data to include only the Chinstrap penguin data. It also renames the two variables we’ll be working with, ‘mass’ and ‘flipperlength’ for ease of coding.
+
+```{r 2}
+
+library(palmerpenguins)
+
+d <- as.data.frame(penguins)
+d <- d[d$species == "Chinstrap", ]
+
+mass          <- d$body_mass_g
+flipperlength <- d$flipper_length_mm
+
+```
+
+##### A
+
+Fit two linear models to the mass and flipperlength data. First, fit the model that assumes the mean mass is a constant (i.e., the intercept model). Second, fit the model that attempts to predict mass using flipperlength. Use lm() for both of these, saving the fit models into objects, using the name ‘m0’ for the intercept-only model and ‘m1’ for the mass - flipperlength model.
+
+```{r 2a}
+
+# intercept-only model (mean mass is a constant)
+m0 <- lm(mass ~ 1)
+
+# model predicting mass from flipperlength
+m1 <- lm(mass ~ flipperlength)
+
+```
+
+*I asked Maizey for help on m0 because I was unsure if what I thought to do was correct, turns out I was overthinking it.*
+
+##### B
+
+Now plot the mean predictions of each model. First make a scatter plot of the raw mass ∼ flipperlength values, with flipperlength on the horizontal (i.e., x-) axis. Second, use abline() to superimpose both fit models over these data. Make the ‘m0’ line black and the ‘m1’ line red. Your plotting window may still be divided into three panels from the previous question, so use the following code to return to the default layout before plotting.
+
+```{r 2b}
+
+# reset plotting window
+par(mfrow = c(1, 1))
+
+# scatter plot
+plot(flipperlength, mass,
+     xlab = "Flipper Length (mm)",
+     ylab = "Body Mass (g)",
+     main = "Chinstrap Penguins: Mass vs Flipper Length")
+
+# add fit models
+abline(h = coef(m0)[1], col = "black", lwd = 2)
+abline(m1, col = "red", lwd = 2)
+
+```
+
+##### C
+
+Now simulate observations from each model and plot them. I’ll walk you through this one, and you’ll do it yourself in later exercises. Generate 100 random flipperlength values between the observed minimum and maximum:
+
+```{r 2c}
+
+fakew <- sample(min(flipperlength):max(flipperlength), 
+                100, replace = TRUE)
+
+```
+
+These are the simulated flipperlengths that we will predict masses for.
+
+We’ll do the intercept-only model first. Extract the value of the intercept (𝛼
+) with:
+
+```{r 2cc}
+
+k0 <- coef(m0)
+
+```
+
+Compute the approximate standard deviation of the distribution, 𝜎
+, with:
+
+```{r 2ccc}
+
+sd0 <- sd(residuals(m0))
+
+```
+
+We can now simulate masses using ‘m0’:
+
+```{r 2cccc}
+
+fm0 <- rnorm(100, mean = k0["(Intercept)"], sd = sd0)
+
+```
+
+The second model works the same way.
+
+```{r 2ccccc}
+
+k1 <- coef(m1)
+sd1 <- sd(residuals(m1))
+fm1 <- rnorm(100, mean = k1["(Intercept)"] + 
+                  k1["flipperlength"] * fakew, 
+             sd = sd1)
+
+```
+
+Note that in both cases, you can refer to each specific parameter estimate by its name. You can remind yourself of the names by just typing ‘k0’ or ‘k1’ on the command line, or by using the summary() function.
+
+Plot both sets of predictions on a graph with flipperlength on the horizontal axis and mass on the vertical axis. (You can use the function points() to add points, like lines() adds lines.) Color each set of points differently (‘m0’ in open black circles, ‘m1’ in closed red circles), so you can tell them apart. What additional information does simulating the model predictions give you, that you didn’t get from plotting the mean prediction lines in part B?
+
+```{r 2cccccc}
+
+# orig data
+plot(mass ~ flipperlength,
+     xlab = "Flipper Length (mm)",
+     ylab = "Body Mass (g)",
+     main = "Simulated Observations from Each Model")
+
+# m0
+points(fakew, fm0, col = "black", pch = 1)
+
+# m1
+points(fakew, fm1, col = "red", pch = 16)
+
+```
+
+*This graph tells us more about the variation and spread of the predicted data, instead of just a mean trend line. This gives us more insight into how the data would look compared to a model where the mean is a constant at zero, and we can definitely see that the models are different and how different they are better with the datapoints graphed than with just the lines.*
+
+### Exercise 3: Exploring model fit vs. predictive accuracy
+
+#### Exercise 3
+
+Our last exercise will entail simulating some data from a linear model, fitting several alternative models to the data, and assessing which model best fits our simulated data set. We will also see how well our models do at predicting a second random sample of data. The goal is to reinforce the core message of the first half of lecture 12: fitting is easy, prediction is hard.
+
+There are several steps to this process, but each is fairly straightforward.
+
+First, we simulate data from linear model. To do this, we write a simple custom function, gen.dat() that takes some input information (arguments) and uses them to simulate data from a linear process. This is a version of the code I used to produce the figures in lecture 12, slides 25 and 26. Look at each line of this code and see if you can understand how it is working.
+
+```{r 3}
+
+gen.dat <- function(n = 30, a = 4, b = 1.3, 
+                    mx = 7, sx = 3, se = 5) {
+    x <- rnorm(n, mx, sx)
+    e <- rnorm(n, 0, se)
+    y <- a + b * x + e
+    data.frame(predictor = x, outcome = y)
+}
+
+```
+
+Next, we use this function to simulate 5 data points. Note, the default argument for sample size, 𝑛, in our function above was 30. We can change this by specifying a different argument so the sample size matches our desired number, which here is 5. We’ll add the set.seed(16) so everyone’s output is the same.
+
+```{r 33}
+
+set.seed(16)
+d <- gen.dat(n = 5)
+
+```
+
+Finally, we plot our randomly simulated data. Note, here I list the variables to be plotted by name (outcome and predictor) and then tell R where these variables can be found inside the argument using data = d. This is quite a common practice, and you have seen it in class. Alternatively, I could have done plot(d$outcome ~ d$predictor) and left out the data = d. 
+
+```{r 333}
+
+plot(outcome ~ predictor,
+     pch = 16, col = "darkorange",
+     las = 1, cex = 1.5,
+     xlim = c(1, 12), ylim = c(2, 28),
+     data = d)
+
+```
+
+These five points comprise the dataset we’d like to model.
+
+##### A
+
+First, we’ll fit a series of models to the data we randomly sampled. Fit the following five models, saving them with names m0, m1, etc:
+
+m0: y ~ 1
+
+```{r 3a}
+m0 <- lm(outcome ~ 1, data = d)
+```
+
+m1: y ~ x
+
+```{r 3aa}
+m1 <- lm(outcome ~ predictor, data = d)
+```
+
+m2: y ~ x + x2
+
+```{r 3aaa}
+m2 <- lm(outcome ~ predictor + I(predictor^2), data = d)
+```
+
+m3: y ~ x + x2 + x3
+
+```{r 3aaaa}
+m3 <- lm(outcome ~ predictor + I(predictor^2) + I(predictor^3), data = d)
+```
+
+m4: y ~ x + x2 + x3 + x4
+
+```{r 3aaaaa}
+m4 <- lm(outcome ~ predictor + I(predictor^2) + I(predictor^3) + I(predictor^4), data = d)
+```
+
+##### B
+
+Next we’d like to calculate the predictions for each of these five models so we can plot them to get a sense of how well each of the models fits our simulated dataset. To do this we’ll use seq() to create a range of values for x (the predictor) and then use each model to estimate the y values (the outcomes) for each. This is very similar to the way we produced confidence intervals in lecture 10. This is how you would do it for m0:
+
+```{r 3b}
+
+# create a series of x-values for which we'll predict y
+xvals <- seq(from = 0,
+             to   = 13,
+             by = 0.01)
+# save these values as a dataframe
+xvals <- as.data.frame(xvals)
+# name the xvals the same as in our initial dataset
+names(xvals) <- "predictor"
+# calculate the predicted values, based on m0
+pred.m0 <- predict(m0, newdata = xvals)
+
+```
+
+Note that the predicted values for m0 will all be the same, as this is the intercept model. This will not be true for the other models.
+
+Next we bind these predicted values, pred.m0, the x vales that predicted them, xvals, and add names to this data frame.
+
+```{r 3bb}
+
+pred.m0.plot <- cbind(xvals, pred.m0)
+names(pred.m0.plot) <- c("predictor", "outcome")
+head(pred.m0.plot)
+
+```
+
+Finally, we plot these predicted values and the original simulated data:
+
+```{r 3bbb}
+
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m0.plot,
+     main = "m0 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+```
+
+Repeat this process for the other four models (m1, m2, m3, m4) (0.5 points each) and produce a combined plot that looks like this, except with the predictions for each model added as gray lines (or curves, depending on the model), as we did above (1 point). Note I added a second plot of m4 in the bottom right, with different axis scales - please do the same, as this will help later on. Note also that your plot does not have to look exactly like this; anything that conveys the information effectively is fine (i.e., it plots the simulated data, adds the predictions as a line/curve in gray, and includes a label above the plot).
+
+```{r 3bbbb}
+
+# calculate predicted values based on m1
+pred.m1 <- predict(m1, newdata = xvals)
+
+# bind predicted values to the xvals that predicted them m1
+pred.m1.plot <- cbind(xvals, pred.m1)
+names(pred.m1.plot) <- c("predictor", "outcome")
+
+# calculate predicted values based on m2
+pred.m2 <- predict(m2, newdata = xvals)
+
+# bind predicted values to the xvals that predicted them m2
+pred.m2.plot <- cbind(xvals, pred.m2)
+names(pred.m2.plot) <- c("predictor", "outcome")
+
+# calculate predicted values based on m3
+pred.m3 <- predict(m3, newdata = xvals)
+
+# bind predicted values to the xvals that predicted them m3
+pred.m3.plot <- cbind(xvals, pred.m3)
+names(pred.m3.plot) <- c("predictor", "outcome")
+
+# calculate predicted values based on m4
+pred.m4 <- predict(m4, newdata = xvals)
+
+# bind predicted values to the xvals that predicted them m4
+pred.m4.plot <- cbind(xvals, pred.m4)
+names(pred.m4.plot) <- c("predictor", "outcome")
+
+```
+
+```{r 3combinedplot, fig.width=10, fig.height=10}
+
+# create combined plot
+par(mfrow = c(3, 2))
+
+# plot predicted values and original simulated data m0
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m0.plot,
+     main = "m0 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+# plot predicted values and original simulated data m1
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m1.plot,
+     main = "m1 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+# plot predicted values and original simulated data m2
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m2.plot,
+     main = "m2 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+# plot predicted values and original simulated data m3
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m3.plot,
+     main = "m3 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+# plot predicted values and original simulated data m4
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m4.plot,
+     main = "m4 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+# zoom out for m4
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(-19, 41),
+     data = pred.m4.plot,
+     main = "m4 predictions, zoomed out")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+```
+
+*Asked for Maizey for help with making the plot size bigger in the html file.*
+
+##### C
+
+Which model appears to do the best job of fitting our initial dataset? Note that when we talk about models fitting data, we are concerned with the vertical distance between the points and the model predictions (the line/curve); as we’ve discussed, this distance is known as a residual.
+
+*Based on the plots above, it seems like m4 does the best job of fitting our initial data set. In this graph, and the zoomed out version, the trend line passes, seemingly, perfectly through the middle of every point in our initial dataset--making any residual values almost non-existent.*
+
+##### D
+
+Finally, we use our gen.dat() function above to generate five new random observations. Repeat the full plot for part C (with initial data and predicted lines or curves for each model), but then add the five newly simulated points as blue open circles (0.5 points). Does the best fitting model you identified in part C do the best job at predicting these new simulated values? Why or why not? (0.5 points)
+
+```{r 3d}
+
+dd <- gen.dat(n = 5)
+
+```
+
+```{r 3dd, fig.width=10, fig.height=10}
+
+# create combined plot
+par(mfrow = c(3, 2))
+
+# plot predicted values and original simulated data m0
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m0.plot,
+     main = "m0 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+points(outcome ~ predictor,
+     pch = 1, cex = 1.5,
+     col = "darkblue",
+     data = dd)
+
+# plot predicted values and original simulated data m1
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m1.plot,
+     main = "m1 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+points(outcome ~ predictor,
+     pch = 1, cex = 1.5,
+     col = "darkblue",
+     data = dd)
+
+# plot predicted values and original simulated data m2
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m2.plot,
+     main = "m2 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+points(outcome ~ predictor,
+     pch = 1, cex = 1.5,
+     col = "darkblue",
+     data = dd)
+
+# plot predicted values and original simulated data m3
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m3.plot,
+     main = "m3 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+points(outcome ~ predictor,
+     pch = 1, cex = 1.5,
+     col = "darkblue",
+     data = dd)
+
+# plot predicted values and original simulated data m4
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(2, 28),
+     data = pred.m4.plot,
+     main = "m4 predictions")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+points(outcome ~ predictor,
+     pch = 1, cex = 1.5,
+     col = "darkblue",
+     data = dd)
+
+# zoom out for m4
+plot(outcome ~ predictor,
+     type  = "l", col = "gray50",
+     las = 1, lwd = 1.5,
+     xlim = c(1, 13), ylim = c(-19, 41),
+     data = pred.m4.plot,
+     main = "m4 predictions, zoomed out")
+
+points(outcome ~ predictor,
+     pch = 16, cex = 1.5,
+     col = "darkorange",
+     data = d)
+
+points(outcome ~ predictor,
+     pch = 1, cex = 1.5,
+     col = "darkblue",
+     data = dd)
+
+```
+
+*Our m4 model does not do the best job at fitting our new predicted data set, because of how large the residuals are, the data points being so far from the trend line. It seems like our m1 model may be a better fit for these data because of the smaller residuals.*
