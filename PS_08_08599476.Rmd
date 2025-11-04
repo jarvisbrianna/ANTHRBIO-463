@@ -1,0 +1,287 @@
+---
+title: "Problem Set 8"
+author: "08599476"
+subtitle: ANTHRBIO 463
+output:
+  html_document:
+    highlight: tango
+    theme: cerulean
+  pdf_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+#code chunk to put in default settings, like whether other code chunks run/show messages
+knitr::opts_chunk$set(echo = TRUE, 
+                      messages = FALSE)
+
+# Set so that long lines in R will be wrapped:
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+#note may need to install and load package "formatR" for this to run. 
+
+options (width = 80)
+
+```
+
+### Exercise 1: (Another) multipanel orangutan figure
+
+#### Exercise 1
+
+This question entails reproducing a plot similar to one that appeared in an edited volume1. The chapter is in the problem set folder if you are interested in the context of the figure, but you do not need to read it to do the problem set (or at all!).
+
+You are welcome to use either {base} R or {ggolot2} to tackle the question. I produced the figure in {base} R, which is what I will present in the solutions key, but if you successfully reproduce the plot in {ggplot2}, you will get full credit.
+
+Your task is to produce a plot that looks as close to the following plot as possible. 
+
+Here’s the legend provided in the chapter (for your information): “The figures in the left column depict orangutan population density (individuals/km2) as a function of the percent of plants with mature or ripe fruit in montane forests (A), lowland forests (here comprising freshwater swamps, alluvial bench, lowland sandstone, lowland granite, and upland granite forests, C), and peat swamps (E). Orangutan density in the lowlands is well explained by fruit availability in those forests– the model of density ~ fruit availability has model weight (ω) of 1 and ΔAICc of 21.6 when compared with an intercept model (density ~ 1); the β coefficient (± SE) estimate of the effects of fruit is 250 ± 43, indicating a reliably positive effect (C). In the peat swamps (E) and montane forests (A) the intercept model is a better model that the fruit model (peat: ω = 0.74, ΔAICc = 2.1; montane: ω = 0.67, ΔAICc = 1.4) and the β coefficients in the fruit models for the montane and peat forests are not reliable positive predictors (montane: -46 ± 46; peat: 85 ± 155; A, E). The figures on the right plot orangutan population density (colored lines, left hand y-axis is the same as in plots A, C, and E) and the % stems with mature or ripe fruit (gray bars, right hand y-axis) in montane forest (B), the lowlands (D), and peat swamp (F) over time. Dashed horizontal lines indicate the mean orangutan density in that forest type.”
+
+To make this figure, you should use the data contained in the file “PS_08_orangutans.csv”. The file contains data from 31 months.
+
+```{r}
+d <- read.csv("PS_08_orangutans.csv")
+```
+
+The date column indicates the month and year (year.mo, although note that above you only see the year) and the time column is an integer that counts from the first to the thirty first month in the time series. The remainder of the columns indicate the proportion of trees bearing fruit (per.fr.XX) and orangutan density (den.oh.XX) in the lowland forest types (LL), the peat swamp (PS), and the montane forest (MO). Thus, d$per.fr.MO is the proportion of trees in our montane phenology plots that produced fruit in each month, d$den.oh.PS is the monthly abundance of orangutans in the peat swamp, and so forth. 
+
+Much of what we covered in class will be directly transferable to the production of this graph - although not all of it will. 
+
+In order to get full credit (12 points total), you should use looping functions to draw the plots. At least one aspect of the plot is not quite as straight forward as the one we did in class, so you’ll have to think a bit about how best to tackle it (there are multiple ways you could do it). 
+
+While we would like you to try your best to faithfully replicate the plot above, we will grade you on the following specific elements of the plot. 
+
+- use of looping functions to draw plots (2 points) 
+- layout of the six panels (right column is three times wider than the left one) (1 point) 
+- set margin around the outside of the plot (0.5 point) 
+- y-axis labels in the left (note the superscript) and right outer margins (1 point) 
+- set margins around the subplots (0.5 point) 
+
+In plots A, C, and E: 
+
+- shaded 95% confidence intervals (CIs) & regression lines (0.75 point)
+- scatter plots in the correct colors with points atop the shaded CIs (0.5 point)
+- x-axis in each plot, with tick labels visible only in the bottom plot (0.5 point)
+- y-axis of each plot (with appropriate use of colors and labels) (0.5 point)
+- panels labeled “A”, “C”, and “E” in top left of each panel (0.5 point)
+
+In plots B, D, and F:
+
+- barplots with correct heights, borders and fill colors (0.75 point)
+- color and position of the line showing orangutan abundance (0.5 point)
+- appropriately colored horizontal line at the mean population density (0.5 point)
+- x-axis in plot F, none visible in B and D (0.5 point)
+- left y-axis of each plot, with correct colors and no labels visible (0.5 point)
+- right y-axis of each plot, with correct color and labels (0.5 point)
+- panels labeled “B”, “D”, and “F” in top left of each panel (0.5 point)
+- appropriately colored forest type names “Montane”, “Lowlands”, and “Peat swamp” in top center of each panel (0.5 point)
+
+We will not be sticklers for precise colors (e.g., what shade of orange or gray) or margins down to the millimeter. We are looking for the correct general layout, colors that approximate those above, etc.
+
+```{r}
+# panel info
+panel.labels <- c("A", "B", "C", "D", "E", "F")
+forest.types <- c("Montane", "Montane", "Lowlands", "Lowlands", "Peat swamp", "Peat swamp")
+
+# color assignments
+scatter.cols <- c("darkgreen", "darkgreen", "blue", "blue", "orange", "orange")
+bar.cols <- rep("lightgray", 6)
+orangutan.line.cols <- scatter.cols
+mean.line.cols <- scatter.cols
+
+# vars for each forest type
+per.fr.vars <- list(d$per.fr.MO, d$per.fr.LL, d$per.fr.PS)
+per.fr.vars <- lapply(per.fr.vars, function(x) x * 100)
+den.oh.vars <- list(d$den.oh.MO, d$den.oh.LL, d$den.oh.PS)
+
+# layout: 3 rows, left column narrow, right column wider
+layout(matrix(1:6, nrow = 3, byrow = TRUE), widths = c(1, 3))
+
+# outer margins and subplot margins
+par(oma = c(4, 5, 3, 5), mar = c(2, 2, 2, 2))
+
+for (i in 1:6) {
+  idx <- ceiling(i / 2)
+  # LEFT: scatter plots
+  if (i %% 2 == 1) {
+    x <- per.fr.vars[[idx]]
+    y <- den.oh.vars[[idx]]
+    col <- scatter.cols[i]
+    
+    # fit linear model
+    fit <- lm(y ~ x)
+    xseq <- seq(min(x), max(x), length.out = 100)
+    pred <- predict(fit, newdata = data.frame(x = xseq), se.fit = TRUE)
+    ci.upper <- pred$fit + 1.96 * pred$se.fit
+    ci.lower <- pred$fit - 1.96 * pred$se.fit
+    
+    # empty plot
+    plot(x, y, type = "n", axes = FALSE, xlab = "", ylab = "", main = "",
+         xlim = range(x), ylim = c(0, 8))
+    
+    # confidence interval
+    polygon(c(xseq, rev(xseq)),
+            c(pmax(pmin(ci.upper, 8), 0), rev(pmax(pmin(ci.lower, 8), 0))),
+            col = adjustcolor("lightgray", alpha.f = 0.5), border = NA)
+    
+    # regression line
+    lines(xseq, pmax(pmin(pred$fit, 8), 0), col = "darkgray", lwd = 2)
+    
+    # scatter points
+    points(x, pmax(pmin(y, 8), 0), pch = 19, col = adjustcolor(col, alpha.f = 0.4))
+    
+    # axes
+    axis(2, at = seq(0, 8, 2), col.axis = col, col = col)
+    if (i == 5) axis(1)  # only bottom left
+    
+    # panel label
+    mtext(panel.labels[i], side = 3, adj = 0, line = 0.5, font = 2)
+    
+    # y-axis label (left outer margin)
+    if (i == 1) mtext(expression("Population density (individuals/km"^2*")"), side = 2, line = 3, outer = TRUE, col = "gray7")
+    # x-axis label (bottom left)
+    if (i == 5) mtext(expression("% stems with M/R fruit"), side = 1, line = 3)
+    
+  } else {
+    # RIGHT: barplots with rescaled density
+    x <- d$time
+    y <- per.fr.vars[[idx]]
+    density <- den.oh.vars[[idx]]
+    col <- bar.cols[i]
+    orangutan.col <- orangutan.line.cols[i]
+    mean.col <- mean.line.cols[i]
+
+    # right-hand panel: barplot
+    bp <- barplot(y, col = col, border = "gray47", axes = FALSE, ylim = c(0, 1.5), space = 0)
+
+    # left ticks: match left scatter plot scale (0–8), colored, no labels
+    axis(2, at = seq(0, 8, 2), col.axis = orangutan.col, col = orangutan.col, labels = FALSE)
+
+    # right ticks: for bars (0–1.5), visible numbers
+    axis(4, at = seq(0, 1.5, 0.5), col = "black", col.axis = "black", las = 1)
+
+    # rescale density to bar plot height (0–1.5)
+    lines(bp, density / 8 * 1.5, type = "l", lwd = 2, col = orangutan.col)
+
+    # mean line, rescaled
+    abline(h = mean(density, na.rm = TRUE) / 8 * 1.5, col = mean.col, lwd = 2, lty = 2)
+    
+    # x-axis for bottom plot only
+    if (i == 6) {
+      jan.months <- c("Jan 2008", "Jan 2009", "Jan 2010")
+      jan.x <- sapply(jan.months, function(m) which(format(as.Date(paste0(d$date, ".01"), "%Y.%m.%d"), "%b %Y") == m)[1])
+      axis(1, at = bp[jan.x], labels = jan.months)
+    }
+    
+    # right y-axis label (outer margin)
+    if (i == 2) mtext(expression("% stems with mature or ripe fruit"), side = 4, line = 3, outer = TRUE, col = "gray47")
+    
+    # panel label
+    mtext(panel.labels[i], side = 3, adj = 0, line = 0.5, font = 2)
+    # forest type name
+    mtext(forest.types[i], side = 3, line = 1, col = orangutan.col, cex = 1.2)
+  }
+}
+
+# Restore default par
+par(mfrow = c(1,1))
+```
+
+*I spent so long trying to get the density line to scale correctly, and now that I finally have, the axis for density on the left of the right panel is messed up and I cannot figure out how to fix it. It feels like this is the closest I'll get to replicating the plot.*
+
+### Exercise 2: Violin plots in ggplot
+
+#### Exercise 2
+
+Violin plots are an increasingly popular method for visually depicting the distribution of quantitative data. As traditionally rendered, they present the same information as a box plot, but with the addition of a probability density plot (i.e., a smoothed histogram), which allows them to convey much more information about the distribution of data than does a traditional box plot.
+
+In this exercise, you are tasked with producing a violin plot of orangutan densities in each of the three habitat types we displayed in Exercise 1. We are shooting for something that looks like this:
+
+The data set you used in Exercise 1 is formatted to facilitate your production of the requested figure for Exercise 1, but it violates “tidy data” principles we discussed earlier in the term. For example, the many of the column headings depict values of a variable, rather than the name of a variable (if this doesn’t make intuitive sense to you, see the class 8 code to refresh your memory). So, in our initial data set:
+
+Several of the columns depict measures (orangutan density or fruit abundance) in a particular habitat. A tidy version of the data set would depict habitat type as a variable, with orangutan density and fruit abundance as two other variables. Earlier in the term, we learned how to use data tidying and wrangling tools from the “tidyverse” to tame messy data sets such as this.
+
+##### A
+
+Use {tidyr} (and if needed, other functions) to reformat the original data set to something that will work smoothly with {ggplot2}, another key package in the {tidyverse.} Specifically, use {tidyr} functions to distill the original data set down to a simple two column tibble, with habitat type in one column, and orangutan density in the other. This should produce a tibble (here I call it ‘d.new’, but you can use whatever name you like) with the following structure:
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+d.new <- d %>%
+  select(den.oh.MO, den.oh.LL, den.oh.PS) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "habitat",
+    values_to = "density"
+  )
+```
+
+```{r}
+str(d.new)
+```
+
+The top and bottom of this new dataframe should look like this:
+
+```{r}
+head(d.new)
+```
+
+```{r}
+tail(d.new)
+```
+
+##### B
+
+Using this new tibble, use {ggplot2} to produce as close a replica of the violin plot above as you can. There are multiple ways to do this; any of them that produce a reasonable rendering will receive credit (providing they address the elements listed below). We will assign points to the following specific plot elements:
+
+- violin plots with the correct: 1) color (0.5 points) , 2) orientation (0.5 points) , and 3) order (0.5 points)
+
+- inclusion of a box plot inside the violin plot (often this is considered just part of the violin plot, but these are added separately in {ggplot2}) (0.5 points )
+
+- overall plot aesthetics (you can set these yourself, or use one of the {ggplot} themes, as I did to produce the plot above) (0.5 points)
+
+- custom y-axis labels that name the forest types (including the line break so the name spans two lines, not one) (0.75 points)
+
+- a custom x-axis label that includes the superscript (0.75 points)
+
+The code at the end of lecture 16 ‘code_16_ggplot2_graphics.Rmd’ will help get you started on this.
+
+```{r}
+# change habitat names in data set
+d.new <- d.new %>%
+  mutate(habitat = recode(habitat,
+    "den.oh.MO" = "Montane forest",
+    "den.oh.LL" = "Lowland forest",
+    "den.oh.PS" = "Peat swamp"
+  ))
+
+# mutate data set to have habitats in preferred order
+d.new <- d.new %>%
+  mutate(habitat = factor(habitat, levels = c("Peat swamp", "Lowland forest", "Montane forest")))
+
+# plot violin and box plots
+ggplot(d.new, aes(x = density, y = habitat, fill = habitat)) + 
+  geom_violin(alpha = 0.7, color = "black") +
+  geom_boxplot(width = 0.15, color = "black", alpha = 0.7) +
+  scale_x_continuous(limits = c(0, 8), breaks = c(0, 2, 4, 6)) + # customizes x scale
+  scale_fill_manual(values = c( # customizes colors
+    "Montane forest" = "mediumseagreen", 
+    "Lowland forest" = "slateblue2",
+    "Peat swamp" = "goldenrod2"
+  )) +
+  scale_y_discrete(labels = c( # adds line breaks
+    "Peat\nswamp",
+    "Lowland\nforest",
+    "Montane\nforest"
+  )) +
+  theme_bw() + # sets background white
+  theme(legend.position = "none") + # gets rid of legend
+  labs(
+    y = NULL,  # or y = "" #deletes main y label
+    x = "Population density (orangutans/km²)" # changes x label
+  )
+```
